@@ -1,24 +1,57 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { theme } from '../constants/theme';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    <>
+      <StatusBar style="dark" />
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: theme.colors.surface,
+          },
+          headerTintColor: theme.colors.primary,
+          headerTitleStyle: {
+            fontWeight: '700',
+            color: theme.colors.text,
+            fontSize: 17,
+          },
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: theme.colors.background,
+          },
+        }}
+      >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="dashboard"
+          options={{
+            title: 'Tableau de Bord',
+            headerBackVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="products"
+          options={{
+            title: 'Catalogue Produits',
+          }}
+        />
+        <Stack.Screen
+          name="product/[id]"
+          options={{
+            title: 'Détails Produit',
+          }}
+        />
+        <Stack.Screen
+          name="stock"
+          options={{
+            title: 'Gestion de Stock',
+          }}
+        />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </>
   );
 }

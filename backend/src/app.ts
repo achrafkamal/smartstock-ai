@@ -1,34 +1,33 @@
 import express, { Express } from 'express';
 import cors from 'cors';
-import { env } from './config/env.js';
-import { healthRouter } from './routes/health.routes.js';
-import { errorHandler, notFoundHandler } from './middlewares/error.js';
+import { userRouter } from './routes/user.routes.js';
+import { productRouter } from './routes/product.routes.js';
+import { stockRouter } from './routes/stock.routes.js';
+import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 
 export function createApp(): Express {
   const app = express();
 
-  // Basic security and parsing middleware
-  app.use(
-    cors({
-      origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN,
-      credentials: true,
-    })
-  );
+  // Middleware
+  app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Basic request logger for development
-  if (env.NODE_ENV === 'development') {
-    app.use((req, _res, next) => {
-      console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-      next();
+  // Root / Health check route
+  app.get('/api', (_req, res) => {
+    res.json({
+      success: true,
+      message: 'SmartStock AI API is running',
+      version: '1.0.0',
     });
-  }
+  });
 
   // API Routes
-  app.use('/api', healthRouter);
+  app.use('/api/users', userRouter);
+  app.use('/api/products', productRouter);
+  app.use('/api/stock', stockRouter);
 
-  // Fallback and Error Handlers
+  // Error handling
   app.use(notFoundHandler);
   app.use(errorHandler);
 
