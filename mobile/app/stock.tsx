@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,29 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import { useStockStore, MovementType } from '../store/stockStore';
-import { useProductStore } from '../store/productStore';
+import { useStockMovementsQuery, useCreateStockMovementMutation, MovementType } from '../services/stock';
+import { useProductsQuery } from '../services/products';
 import { theme } from '../constants/theme';
 import { StockCard } from '../components/StockCard';
 import { AppInput } from '../components/AppInput';
 import { AppButton } from '../components/AppButton';
 
 export default function StockScreen() {
-  const { movements, fetchMovements, createMovement, loading } = useStockStore();
-  const { products, fetchProducts } = useProductStore();
+  const {
+    data: movements = [],
+    isLoading: stockLoading,
+    isRefetching: stockRefetching,
+    refetch: refetchMovements,
+  } = useStockMovementsQuery();
+
+  const {
+    data: products = [],
+    isLoading: productsLoading,
+    isRefetching: productsRefetching,
+    refetch: refetchProducts,
+  } = useProductsQuery();
+
+  const createMovementMutation = useCreateStockMovementMutation();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -27,19 +40,10 @@ export default function StockScreen() {
   const [reason, setReason] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchMovements();
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    if (products.length > 0 && !selectedProductId) {
-      setSelectedProductId(products[0].id);
-    }
-  }, [products, selectedProductId]);
+  const activeProductId = selectedProductId || (products.length > 0 ? products[0].id : '');
 
   const handleOpenModal = () => {
-    if (products.length > 0 && (!selectedProductId || !products.some((p) => p.id === selectedProductId))) {
+    if (!selectedProductId && products.length > 0) {
       setSelectedProductId(products[0].id);
     }
     setFormError(null);
@@ -54,7 +58,8 @@ export default function StockScreen() {
       return;
     }
 
-    if (!selectedProductId) {
+    const productIdToUse = activeProductId;
+    if (!productIdToUse) {
       setFormError('Veuillez sélectionner un produit');
       return;
     }
@@ -65,25 +70,25 @@ export default function StockScreen() {
       return;
     }
 
-    const currentProduct = products.find((p) => p.id === selectedProductId);
+    const currentProduct = products.find((p) => p.id === productIdToUse);
     if (currentProduct && (movementType === 'EXIT' || movementType === 'DAMAGED') && currentProduct.quantity < qty) {
       setFormError(`Stock insuffisant (${currentProduct.quantity} disponibles pour ${qty} demandés)`);
       return;
     }
 
-    const success = await createMovement({
-      productId: selectedProductId,
-      type: movementType,
-      quantity: qty,
-      reason: reason.trim() || undefined,
-    });
+    try {
+      await createMovementMutation.mutateAsync({
+        productId: productIdToUse,
+        type: movementType,
+        quantity: qty,
+        reason: reason.trim() || undefined,
+      });
 
-    if (success) {
       setQuantity('');
       setReason('');
       setModalVisible(false);
-      // Refresh products so updated quantities are synced
-      await fetchProducts();
+    } catch (err: any) {
+      setFormError(err.message || 'Erreur lors de la création du mouvement');
     }
   };
 
@@ -118,10 +123,10 @@ export default function StockScreen() {
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={stockRefetching || productsRefetching || (stockLoading && productsLoading)}
             onRefresh={() => {
-              fetchMovements();
-              fetchProducts();
+              refetchMovements();
+              refetchProducts();
             }}
             colors={[theme.colors.primary]}
           />
@@ -238,7 +243,7 @@ export default function StockScreen() {
               <AppButton
                 title="Valider le mouvement"
                 onPress={handleCreateMovement}
-                loading={loading}
+                loading={createMovementMutation.isPending}
                 style={styles.submitBtn}
               />
             </ScrollView>

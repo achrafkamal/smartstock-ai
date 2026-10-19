@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,32 +9,33 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
-import { useProductStore } from '../store/productStore';
-import { useStockStore } from '../store/stockStore';
+import { useProductsQuery } from '../services/products';
+import { useStockMovementsQuery } from '../services/stock';
 import { theme } from '../constants/theme';
-import { StockCard } from '../components/StockCard';
-import { AppButton } from '../components/AppButton';
+const { StockCard } = require('../components/StockCard');
+const { AppButton } = require('../components/AppButton');
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { products, fetchProducts, loading: productsLoading } = useProductStore();
-  const { movements, fetchMovements, loading: stockLoading } = useStockStore();
+  const {
+    data: products = [],
+    isLoading: productsLoading,
+    isRefetching: productsRefetching,
+    refetch: refetchProducts,
+  } = useProductsQuery();
 
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    data: movements = [],
+    isLoading: stockLoading,
+    isRefetching: stockRefetching,
+    refetch: refetchMovements,
+  } = useStockMovementsQuery();
 
-  const loadData = async () => {
-    await Promise.all([fetchProducts(), fetchMovements()]);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
+  const isRefreshing = productsRefetching || stockRefetching;
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
+    await Promise.all([refetchProducts(), refetchMovements()]);
   };
 
   const handleLogout = () => {
@@ -56,7 +57,7 @@ export default function DashboardScreen() {
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing || (productsLoading && stockLoading)}
+          refreshing={isRefreshing || (productsLoading && stockLoading)}
           onRefresh={onRefresh}
           colors={[theme.colors.primary]}
         />

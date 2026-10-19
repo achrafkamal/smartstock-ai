@@ -9,12 +9,12 @@ export function useLoginMutation(
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (credentials: LoginCredentials) => authApi.login(credentials),
-    onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: authKeys.all });
-      options?.onSuccess?.(data, variables, context);
-    },
     ...options,
+    mutationFn: (credentials: LoginCredentials) => authApi.login(credentials),
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: authKeys.all });
+      options?.onSuccess?.(...args);
+    },
   });
 }
 
@@ -24,11 +24,11 @@ export function useCreateUserMutation(
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userData: CreateUserDto) => authApi.createUser(userData),
-    onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: authKeys.users() });
-      options?.onSuccess?.(data, variables, context);
-    },
     ...options,
+    mutationFn: (userData: CreateUserDto) => authApi.createUser(userData),
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: authKeys.users() });
+      options?.onSuccess?.(...args);
+    },
   });
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useProductStore, Product } from '../store/productStore';
+import { useProductsQuery, useCreateProductMutation } from '../services/products';
 import { theme } from '../constants/theme';
 import { SearchBar } from '../components/SearchBar';
 import { ProductCard } from '../components/ProductCard';
@@ -21,7 +21,13 @@ type FilterTab = 'ALL' | 'LOW' | 'OUT';
 
 export default function ProductsScreen() {
   const router = useRouter();
-  const { products, fetchProducts, createProduct, loading } = useProductStore();
+  const {
+    data: products = [],
+    isLoading,
+    isRefetching,
+    refetch: refetchProducts,
+  } = useProductsQuery();
+  const createProductMutation = useCreateProductMutation();
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterTab>('ALL');
@@ -35,10 +41,6 @@ export default function ProductsScreen() {
   const [quantity, setQuantity] = useState('');
   const [lowStockThreshold, setLowStockThreshold] = useState('5');
   const [formError, setFormError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
 
   const handleCreateProduct = async () => {
     setFormError(null);
@@ -57,16 +59,16 @@ export default function ProductsScreen() {
       return;
     }
 
-    const success = await createProduct({
-      name: name.trim(),
-      description: description.trim() || null,
-      price: parsedPrice,
-      costPrice: parsedCostPrice,
-      quantity: isNaN(parsedQty) ? 0 : parsedQty,
-      lowStockThreshold: isNaN(parsedThreshold) ? 5 : parsedThreshold,
-    });
+    try {
+      await createProductMutation.mutateAsync({
+        name: name.trim(),
+        description: description.trim() || null,
+        price: parsedPrice,
+        costPrice: parsedCostPrice,
+        quantity: isNaN(parsedQty) ? 0 : parsedQty,
+        lowStockThreshold: isNaN(parsedThreshold) ? 5 : parsedThreshold,
+      });
 
-    if (success) {
       setName('');
       setDescription('');
       setPrice('');
@@ -74,6 +76,8 @@ export default function ProductsScreen() {
       setQuantity('');
       setLowStockThreshold('5');
       setModalVisible(false);
+    } catch (err: any) {
+      setFormError(err.message || 'Erreur lors de la création du produit');
     }
   };
 
@@ -155,8 +159,8 @@ export default function ProductsScreen() {
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={fetchProducts}
+            refreshing={isRefetching || isLoading}
+            onRefresh={() => refetchProducts()}
             colors={[theme.colors.primary]}
           />
         }
@@ -248,7 +252,7 @@ export default function ProductsScreen() {
               <AppButton
                 title="Enregistrer le produit"
                 onPress={handleCreateProduct}
-                loading={loading}
+                loading={createProductMutation.isPending}
                 style={styles.saveBtn}
               />
             </ScrollView>

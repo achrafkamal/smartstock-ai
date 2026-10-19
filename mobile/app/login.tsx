@@ -10,13 +10,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
+import { useLoginMutation } from '../services/auth';
 import { theme } from '../constants/theme';
 import { AppInput } from '../components/AppInput';
 import { AppButton } from '../components/AppButton';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, loading, error } = useAuthStore();
+  const { setAuth } = useAuthStore();
+  const loginMutation = useLoginMutation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,9 +32,15 @@ export default function LoginScreen() {
       return;
     }
 
-    const success = await login(email.trim(), password);
-    if (success) {
+    try {
+      const data = await loginMutation.mutateAsync({
+        email: email.trim(),
+        password,
+      });
+      setAuth(data.user, data.token);
       router.replace('/dashboard' as any);
+    } catch (err: any) {
+      setLocalError(err.message || 'Échec de connexion');
     }
   };
 
@@ -42,7 +50,7 @@ export default function LoginScreen() {
     setLocalError(null);
   };
 
-  const displayError = localError || error;
+  const displayError = localError || loginMutation.error?.message;
 
   return (
     <KeyboardAvoidingView
@@ -57,7 +65,7 @@ export default function LoginScreen() {
           {/* Brand Header */}
           <View style={styles.header}>
             <View style={styles.logoBadge}>
-              <Text style={styles.logoText}>📦</Text>
+              <Text style={styles.logoText}></Text>
             </View>
             <Text style={styles.title}>SmartStock AI</Text>
             <Text style={styles.subtitle}>Ma7alkom Stock Management</Text>
@@ -91,7 +99,7 @@ export default function LoginScreen() {
           <AppButton
             title="Se Connecter"
             onPress={handleLogin}
-            loading={loading}
+            loading={loginMutation.isPending}
             style={styles.submitBtn}
           />
 

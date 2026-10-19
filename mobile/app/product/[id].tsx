@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,22 +7,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useProductStore } from '../../store/productStore';
+import { useProductQuery } from '../../services/products';
 import { theme } from '../../constants/theme';
 import { AppButton } from '../../components/AppButton';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { selectedProduct, fetchProduct, loading, error } = useProductStore();
+  const {
+    data: selectedProduct,
+    isLoading,
+    error,
+  } = useProductQuery(id as string);
 
-  useEffect(() => {
-    if (id) {
-      fetchProduct(id);
-    }
-  }, [id]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -33,7 +31,9 @@ export default function ProductDetailScreen() {
   if (error || !selectedProduct) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Produit introuvable'}</Text>
+        <Text style={styles.errorText}>
+          {error?.message || 'Produit introuvable'}
+        </Text>
         <AppButton title="Retour" onPress={() => router.back()} style={styles.backBtn} />
       </View>
     );
@@ -97,7 +97,7 @@ export default function ProductDetailScreen() {
             <Text style={[styles.infoValue, { color: badge.color }]}>{p.quantity}</Text>
           </View>
           <View style={styles.infoCol}>
-            <Text style={styles.infoLabel}>Seuil d'Alerte</Text>
+            <Text style={styles.infoLabel}>{"Seuil d'Alerte"}</Text>
             <Text style={styles.infoValue}>{p.lowStockThreshold}</Text>
           </View>
         </View>

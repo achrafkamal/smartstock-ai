@@ -1,37 +1,20 @@
 import { create } from 'zustand';
-import { api } from '../services/api';
-import { Product } from './productStore';
+import {
+  stockApi,
+  StockMovement,
+  MovementType,
+  CreateStockMovementDto,
+} from '../services/stock';
+import { Product } from '../services/products';
 
-export type MovementType = 'ENTRY' | 'EXIT' | 'ADJUSTMENT' | 'DAMAGED';
-
-export interface StockMovement {
-  id: string;
-  type: MovementType;
-  quantity: number;
-  reason: string | null;
-  productId: string;
-  userId: string | null;
-  createdAt: string;
-  product?: Product;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-  };
-}
+export type { StockMovement, MovementType, Product };
 
 interface StockState {
   movements: StockMovement[];
   loading: boolean;
   error: string | null;
   fetchMovements: () => Promise<void>;
-  createMovement: (data: {
-    productId: string;
-    type: MovementType;
-    quantity: number;
-    reason?: string;
-  }) => Promise<boolean>;
+  createMovement: (data: CreateStockMovementDto) => Promise<boolean>;
 }
 
 export const useStockStore = create<StockState>((set, get) => ({
@@ -42,17 +25,17 @@ export const useStockStore = create<StockState>((set, get) => ({
   fetchMovements: async () => {
     set({ loading: true, error: null });
     try {
-      const data = await api.getStockMovements();
+      const data = await stockApi.getStockMovements();
       set({ movements: data, loading: false });
     } catch (err: any) {
       set({ error: err.message || 'Erreur lors du chargement des mouvements', loading: false });
     }
   },
 
-  createMovement: async (data) => {
+  createMovement: async (data: CreateStockMovementDto) => {
     set({ loading: true, error: null });
     try {
-      await api.createStockMovement(data);
+      await stockApi.createStockMovement(data);
       await get().fetchMovements();
       return true;
     } catch (err: any) {

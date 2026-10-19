@@ -1,17 +1,7 @@
 import { create } from 'zustand';
-import { api } from '../services/api';
+import { productApi, Product, CreateProductDto } from '../services/products';
 
-export interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  costPrice: number;
-  quantity: number;
-  lowStockThreshold: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
+export type { Product };
 
 interface ProductState {
   products: Product[];
@@ -20,8 +10,8 @@ interface ProductState {
   error: string | null;
   fetchProducts: () => Promise<void>;
   fetchProduct: (id: string) => Promise<Product | null>;
-  createProduct: (data: Partial<Product>) => Promise<boolean>;
-  updateProduct: (id: string, data: Partial<Product>) => Promise<boolean>;
+  createProduct: (data: CreateProductDto) => Promise<boolean>;
+  updateProduct: (id: string, data: Partial<CreateProductDto>) => Promise<boolean>;
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
@@ -33,7 +23,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchProducts: async () => {
     set({ loading: true, error: null });
     try {
-      const data = await api.getProducts();
+      const data = await productApi.getProducts();
       set({ products: data, loading: false });
     } catch (err: any) {
       set({ error: err.message || 'Erreur lors du chargement des produits', loading: false });
@@ -43,7 +33,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchProduct: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      const product = await api.getProduct(id);
+      const product = await productApi.getProduct(id);
       set({ selectedProduct: product, loading: false });
       return product;
     } catch (err: any) {
@@ -52,10 +42,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
 
-  createProduct: async (data: Partial<Product>) => {
+  createProduct: async (data: CreateProductDto) => {
     set({ loading: true, error: null });
     try {
-      await api.createProduct(data);
+      await productApi.createProduct(data);
       await get().fetchProducts();
       return true;
     } catch (err: any) {
@@ -64,10 +54,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
 
-  updateProduct: async (id: string, data: Partial<Product>) => {
+  updateProduct: async (id: string, data: Partial<CreateProductDto>) => {
     set({ loading: true, error: null });
     try {
-      await api.updateProduct(id, data);
+      await productApi.updateProduct(id, data);
       await get().fetchProducts();
       if (get().selectedProduct?.id === id) {
         await get().fetchProduct(id);

@@ -32,10 +32,11 @@ async function start() {
       console.log('Initial demo admin created: admin@smartstock.ma / Password123');
     }
 
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`=========================================`);
       console.log(`SmartStock AI Backend running on port ${PORT}`);
-      console.log(`API URL: http://localhost:${PORT}/api`);
+      console.log(`Local URL: http://localhost:${PORT}/api`);
+      console.log(`Network URL: http://0.0.0.0:${PORT}/api`);
       console.log(`=========================================`);
     });
 

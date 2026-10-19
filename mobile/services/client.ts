@@ -1,12 +1,39 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// Default to localhost for web/iOS and 10.0.2.2 for Android emulator
-const DEFAULT_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:5000/api'
-    : 'http://localhost:5000/api';
+function getDefaultApiUrl(): string {
+  // 1. Explicitly configured via environment variable
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_URL;
+  // 2. Auto-detect Developer PC's LAN IP from Expo's hostUri (works for physical phones in Expo Go)
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    (Constants.manifest as any)?.debuggerHost ||
+    (Constants.manifest2 as any)?.extra?.expoGo?.debuggerHost;
+
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+      return `http://${ip}:5000/api`;
+    }
+  }
+
+  // 3. Android Emulator loopback
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5000/api';
+  }
+
+  // 4. Default for Web & iOS Simulator
+  return 'http://localhost:5000/api';
+}
+
+export const API_BASE_URL = getDefaultApiUrl();
+
+if (__DEV__) {
+  console.log(`[API Client] Connected to: ${API_BASE_URL}`);
+}
 
 let authToken: string | null = null;
 
@@ -48,10 +75,17 @@ export async function request<T = any>(endpoint: string, options: RequestOptions
     headers['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const response = await fetch(url, {
-    ...restOptions,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...restOptions,
+      headers,
+    });
+  } catch (err: any) {
+    const networkMsg = `Impossible de contacter le serveur (${url}). Vérifiez que le backend est démarré et que votre téléphone est sur le même réseau Wi-Fi.`;
+    console.error(`[API Error] Request failed to ${url}:`, err);
+    throw new Error(networkMsg);
+  }
 
   const json = await response.json().catch(() => ({}));
 

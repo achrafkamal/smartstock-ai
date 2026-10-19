@@ -1,12 +1,8 @@
 import { create } from 'zustand';
-import { api, setAuthToken } from '../services/api';
+import { authApi, User } from '../services/auth';
+import { setAuthToken } from '../services/client';
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'ADMIN' | 'MANAGER' | 'CASHIER';
-}
+export type { User };
 
 interface AuthState {
   user: User | null;
@@ -14,6 +10,7 @@ interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  setAuth: (user: User, token: string) => void;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -25,10 +22,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: false,
   error: null,
 
+  setAuth: (user: User, token: string) => {
+    setAuthToken(token);
+    set({
+      user,
+      token,
+      isAuthenticated: true,
+      loading: false,
+      error: null,
+    });
+  },
+
   login: async (email: string, password: string) => {
     set({ loading: true, error: null });
     try {
-      const data = await api.login(email, password);
+      const data = await authApi.login({ email, password });
       setAuthToken(data.token);
       set({
         user: data.user,
